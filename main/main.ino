@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <SPI.h>
-#include <TimeLib.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
@@ -9,9 +8,9 @@
 #include <RH_RF95.h>
 
 #define SD_CS BUILTIN_SDCARD
-#define RFM95_CS 4
-#define RFM95_RST 2
-#define RFM95_INT 3
+#define RFM95_CS 10
+#define RFM95_RST 3
+#define RFM95_INT 2
 #define RF95_FREQ 915.0
 #define GPSBaud 9600
 
@@ -24,16 +23,15 @@ int calStatus; // BNO055 calibration status
 File data; // SD file
 char FileName[] = "flight.csv";
 int packetcount; // Radio packet counter
-uint8_t packet[50];
+uint8_t packet[42];
 
 Adafruit_BMP280 bmp;
-Adafruit_BNO055 bno = Adafruit_BNO055(55);
+Adafruit_BNO055 bno;
 TinyGPSPlus gps;
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 void setup() {
-  Serial.begin(9600);
-  delay(100);
+  Serial.begin(9600); while (!Serial);
   Serial.println("\n------------------------------\n");
 
 
@@ -56,6 +54,7 @@ void setup() {
 
   /* BNO055 9-Axis IMU */
   Serial.println("Initializing BNO055 9-Axis IMU...");
+  bno = Adafruit_BNO055(55);
   if (!bno.begin()) {
     Serial.println("Failed!\n");
     while(1);
@@ -76,7 +75,6 @@ void setup() {
 
   /* RFM95x LoRa Radio */
   Serial.println("Initializing RFM95 LoRa Radio Transmitter...");
-  
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
   digitalWrite(RFM95_RST, LOW); delay(10);
@@ -84,9 +82,9 @@ void setup() {
   
   if (!rf95.init()) {
     Serial.println("Failed!\n");
-//    while(1);
+    while(1);
   } else {
-    Serial.print("Setting frequency to: "); Serial.println(RF95_FREQ);
+    Serial.print("Setting frequency to: "); Serial.print(RF95_FREQ); Serial.println(" MHz");
     if (!rf95.setFrequency(RF95_FREQ)) {
       Serial.println("Failed!\n");
       while(1);
@@ -102,21 +100,22 @@ void setup() {
   Serial.println("Initializing SD Card Reader...");
   if (!SD.begin(SD_CS)) {
     Serial.println("Failed!\n");
-//    while(1);
+    while(1);
   }
   else {
     Serial.println("Success!\n");
     data = SD.open(FileName, FILE_WRITE);
     if (!data) {
       Serial.println("Error opening file!\n");
-//      while(1);
+      while(1);
     }
     data.println("count,time,altitude,roll,pitch,yaw,ax,ay,az,lat,long");
     data.close();
-    delay(1000);
   }
+  delay(1000);
 
-  Serial.println("\nFC Ready!");
+  Serial.println("\nFC Ready!\n");
+  delay(1000);
 }
 
 void loop() {
@@ -170,47 +169,40 @@ void loop() {
   data = SD.open(FileName, FILE_WRITE);
   if (!data) {
     Serial.println("Error opening file!\n");
-//    while(1);
+    while(1);
   } else {
-    data.print(packetcount); data.print(",");
-    data.print(t); data.print(",");
-    data.print(a); data.print(",");
-    data.print(x, 4); data.print(",");
-    data.print(y, 4); data.print(",");
-    data.print(z, 4); data.print(",");
-    data.print(ax, 4); data.print(",");
-    data.print(ay, 4); data.print(",");
-    data.print(az, 4); data.print(",");
-    data.print(latitude, 6); data.print(",");
-    data.print(longitude, 6); data.println("");
-//    data.print(s1_command); data.print(",");
-//    data.print(s2_command); data.print(",");
-//    data.print(s3_command); data.print(",");
-//    data.print(s4_command); data.println("");
+//    data.print(packetcount); data.print(",");
+//    data.print(t); data.print(",");
+//    data.print(a); data.print(",");
+//    data.print(x, 4); data.print(",");
+//    data.print(y, 4); data.print(",");
+//    data.print(z, 4); data.print(",");
+//    data.print(ax, 4); data.print(",");
+//    data.print(ay, 4); data.print(",");
+//    data.print(az, 4); data.print(",");
+//    data.print(latitude, 6); data.print(",");
+//    data.print(longitude, 6); data.println("");
     data.close();
   }
 
 
   /* Radio (RFM95x) */
-//  Serial.print("Transmitting Packet #"); Serial.println(packetcount);
-//  memcpy(packet, &packetcount, sizeof(packetcount));
-//  memcpy(packet + 2, &t, sizeof(t));
-//  memcpy(packet + 6, &a, sizeof(a));
-//  memcpy(packet + 10, &x, sizeof(x));
-//  memcpy(packet + 14, &y, sizeof(y));
-//  memcpy(packet + 18, &z, sizeof(z));
-//  memcpy(packet + 22, &ax, sizeof(ax));
-//  memcpy(packet + 26, &ay, sizeof(ay));
-//  memcpy(packet + 30, &az, sizeof(az));
-//  memcpy(packet + 34, &latitude, sizeof(latitude));
-//  memcpy(packet + 38, &longitude, sizeof(longitude));
-//  memcpy(packet + 42, &s1_command, sizeof(s1_command));
-//  memcpy(packet + 44, &s1_command, sizeof(s1_command));
-//  memcpy(packet + 46, &s1_command, sizeof(s1_command));
-//  memcpy(packet + 48, &s1_command, sizeof(s1_command));
-//  rf95.send((uint8_t *) packet, sizeof(packet)); delay(10);
-//  rf95.waitPacketSent();
-//  packetcount++;
+  Serial.print("Transmitting Packet #"); Serial.println(packetcount);
+  memcpy(packet, &packetcount, sizeof(packetcount));
+  memcpy(packet + 2, &t, sizeof(t));
+  memcpy(packet + 6, &a, sizeof(a));
+  memcpy(packet + 10, &x, sizeof(x));
+  memcpy(packet + 14, &y, sizeof(y));
+  memcpy(packet + 18, &z, sizeof(z));
+  memcpy(packet + 22, &ax, sizeof(ax));
+  memcpy(packet + 26, &ay, sizeof(ay));
+  memcpy(packet + 30, &az, sizeof(az));
+  memcpy(packet + 34, &latitude, sizeof(latitude));
+  memcpy(packet + 38, &longitude, sizeof(longitude));
+  rf95.send(packet, sizeof(packet));
+  rf95.waitPacketSent();
+  packetcount++;
+  
   delay(100);
 }
 
