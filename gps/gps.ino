@@ -7,8 +7,7 @@ float latitude, longitude;
 TinyGPSPlus gps;
 
 void setup() {
-  Serial.begin(9600);
-  delay(100);
+  Serial.begin(9600); while(!Serial);
   Serial.println("\n------------------------------\n");
 
   /* NEO-6M GPS */
